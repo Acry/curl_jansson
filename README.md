@@ -13,6 +13,8 @@ saves: XdjyRm.json
 
 You can view shaders with https://github.com/Acry/SDL2-OpenGL  
 
+3 - parse file with jansson and get some output  
+
 Useful links:  
 [libcurl](https://curl.haxx.se/libcurl/)  
 
