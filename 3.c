@@ -3,7 +3,9 @@
 #include <string.h>
 #include <jansson.h>
 
-// Extract Shader Name from shadertoy-json
+// Code does: extract shader name from shadertoy-json
+
+// read file into array
 char 	*read_file(char *);
 
 int main(int argc, char *argv[])

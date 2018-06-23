@@ -14,6 +14,7 @@ saves:
 `XdjyRm.json`  
 
 You can view shaders with https://github.com/Acry/SDL2-OpenGL  
+But it is work in progress, just implementing assets, that is why this repo exists.  
 
 3 - parse file with jansson and get some output  
 example:  
