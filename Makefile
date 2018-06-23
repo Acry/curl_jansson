@@ -12,7 +12,7 @@ LDFLAGS3 = $(LDFLAGS1) $(LDFLAGS2)
 srcdir	 =./
 builddir =build/ ## unsused til more examples
 
-TARGETS	 = 1 2 3
+TARGETS	 = 1 2 3 4
 
 .PHONY: all
 all: $(TARGETS)
@@ -28,6 +28,10 @@ all: $(TARGETS)
 # parse file with jansson and get some output
 3: $(srcdir)3.c
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS2)
+
+# get ressource from shadertoy after parsing json
+4: $(srcdir)4.c
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS3)
 
 .PHONY: clean
 clean:

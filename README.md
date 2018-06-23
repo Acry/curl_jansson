@@ -20,6 +20,9 @@ But it is work in progress, just implementing assets, that is why this repo exis
 example:  
 `./3 XdjyRm.json`  
 
+4 - gets and save needed texture  
+`./4 Ms2SWW`  
+
 Useful links:  
 [libcurl](https://curl.haxx.se/libcurl/) | [jansson](http://www.digip.org/jansson/)  
 
