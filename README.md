@@ -8,12 +8,16 @@ This code retrieves a JSON file from [shadertoy](https://www.shadertoy.com).
 see: https://www.shadertoy.com/myapps  
 I provided a key you can use.  
 usage: $name shader-ID  
-example: ./2 XdjyRm  
-saves: XdjyRm.json  
+example:  
+`./2 XdjyRm`  
+saves:
+`XdjyRm.json`  
 
 You can view shaders with https://github.com/Acry/SDL2-OpenGL  
 
 3 - parse file with jansson and get some output  
+example:  
+`./3 XdjyRm.json`  
 
 Useful links:  
 [libcurl](https://curl.haxx.se/libcurl/) | [jansson](http://www.digip.org/jansson/)  
