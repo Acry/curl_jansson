@@ -16,7 +16,7 @@ You can view shaders with https://github.com/Acry/SDL2-OpenGL
 3 - parse file with jansson and get some output  
 
 Useful links:  
-[libcurl](https://curl.haxx.se/libcurl/)  
+[libcurl](https://curl.haxx.se/libcurl/) | [jansson](http://www.digip.org/jansson/)  
 
 [More C Example Code](https://gist.github.com/Acry/554e04bab3a2669a5ba2ecd4d673e875)  
 
