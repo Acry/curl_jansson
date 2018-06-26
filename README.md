@@ -21,7 +21,10 @@ example:
 `./3 XdjyRm.json`  
 
 4 - gets and save needed texture  
+example:  
 `./4 Ms2SWW`  
+
+For a working Drag and Drop example see: https://github.com/Acry/SDL2-DnD  
 
 Useful links:  
 [libcurl](https://curl.haxx.se/libcurl/) | [jansson](http://www.digip.org/jansson/)  
