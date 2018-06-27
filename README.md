@@ -1,5 +1,9 @@
 ### C - use of libcurl
 
+  !!! ATTENTION SHADERTOY API CURRENTLY NOT WORKING  
+  check this link to see if the API is working:  
+  https://www.shadertoy.com/api/v1/shaders/MslGWN?key=fdrtwr  
+
 This code retrieves a JSON file from [shadertoy](https://www.shadertoy.com).  
 
 1 - save shader to disk without using API  
