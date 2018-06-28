@@ -12,7 +12,7 @@ LDFLAGS3 = $(LDFLAGS1) $(LDFLAGS2)
 srcdir	 =./
 builddir =build/ ## unsused til more examples
 
-TARGETS	 = 1 2 3 4
+TARGETS	 = 1 2 3 4 5 6 7 8
 
 .PHONY: all
 all: $(TARGETS)
@@ -31,6 +31,22 @@ all: $(TARGETS)
 
 # get ressource from shadertoy after parsing json
 4: $(srcdir)4.c
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS3)
+
+# check type
+5: $(srcdir)5.c
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS3)
+
+# check type & existence, pass filename
+6: $(srcdir)6.c
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS3)
+
+# latest - clean
+7: $(srcdir)7.c
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS3)
+
+# like 7 but without using API - API changed Shader is now an Array
+8: $(srcdir)8.c
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS3)
 
 .PHONY: clean

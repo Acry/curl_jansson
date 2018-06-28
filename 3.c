@@ -24,7 +24,6 @@ int main(int argc, char *argv[])
 	json_file = read_file(argv[1]);
 	if(!json_file)
 		return 2;
-	
 
 	// decode json from char array
 	json_error_t error;

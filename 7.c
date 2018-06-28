@@ -1,34 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <curl/curl.h>
 #include <jansson.h>
 
 // Code does: load a texture needed by shader from shadertoy
 // see: https://www.shadertoy.com/api
+// If json exists, don't download, parse from file.
+// If texture exists, download is skipped also.
 
-// example:  
-// ./4 Ms2SWW
-
-/*
-Access the assets.
-When you retrieve a shader you will see a key called "inputs",
-this can be a texture/video/keyboard/sound used by the shader.
-
-The JSON returned when accessing a shader will look like this: 
-[..]
-{"inputs":[{"id":17,"src":"/media/a/(hash.extension)","ctype":"texture","channel":0}
-[..] 
-
-To access this specific asset you can just cut and paste this path
-https://www.shadertoy.com/media/a/(hash.extension)
-*/
+// example:
+// ./7 Ms2SWW	# with text
+// ./7 Xds3Rr	# with sound -> should tell not supported
 
 #define CONFFILE	"api_key"
 #define BUFFER_SIZE  	(256 * 1024)  /* 256 KB */
 
-#define URL_ASSET	"https://www.shadertoy.com%s"
-#define URL_FORMAT   	"https://www.shadertoy.com/api/v1/shaders/%s?key=%s"
+// concat base and api
+#define URL_BASE	"https://www.shadertoy.com"
+#define URL_API		""URL_BASE"/api/v1/shaders/%s?key=%s"
 #define URL_SIZE     	512
 
 struct write_result
@@ -38,14 +29,17 @@ struct write_result
 };
 
 // read file into array
-char 	*read_conf(char *);
-// load json
+char 	*read_file(char *);
 
+// read file into array without newline
+char 	*read_conf(char *);
+
+// load json
 char 	*request(const char *);
 size_t   write_response(void *, size_t , size_t , void *);
 
-// load and write image
-int 	 save_image( char *);
+// load and write image if file doesn't exist
+int 	 save_image( char *, char *);
 
 int main(int argc, char *argv[])
 {
@@ -55,28 +49,52 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// read API-Key
-	char *key;
-	key=read_conf(""CONFFILE);
-	if(!key)
-		return 2;
-	
-	// set URL
-	char url[URL_SIZE];
-	snprintf(url, URL_SIZE, URL_FORMAT, argv[1], key);
-	
-	// get shader info in json format
-	char *text;
-	text = request(url);
-	if(!text)
-		return 3;
-	
+	// check file
 	char *json_file;
-	json_file = text;
+	char buffer[64];
+	char *text;
+	snprintf(buffer, sizeof(buffer), "%s.json",argv[1]);
+	
+	if( access( buffer, F_OK ) != -1 ){
+		printf("exists, nothing to download!\n");
+		text=read_file(buffer);
+		json_file = text;
+	} else { // download json
+	
+		// read API-Key
+		char *key;
+		key=read_conf(""CONFFILE);
+		if(!key)
+			return 2;
+
+		// set URL
+		char url[URL_SIZE];
+		snprintf(url, URL_SIZE, URL_API, argv[1], key);
+		
+		// download json
+		text = request(url);
+		if(!text)
+			return 3;
+
+		json_file = text;
+
+		// save shader json
+		FILE *fp;
+		fp = fopen( buffer , "w" );
+		fputs(text, fp);
+		fclose(fp);
+
+		// set file non executable, one probably won't need this
+		char cmd[128];
+		snprintf(cmd, sizeof(cmd), "chmod -x %s", buffer);
+		system(cmd);
+		free(key);
+
+	}
 	if(!json_file)
 		return 2;
 	
-	// decode json from char array
+	// decode json
 	json_error_t error;
 	json_t *root;
 	root = json_loads(json_file, 0, &error);
@@ -85,7 +103,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	// extract name
+	// extract shader name
 	const char 	*requested_info;
 	json_t 		*Shader, *info, *name;
 
@@ -95,70 +113,53 @@ int main(int argc, char *argv[])
 	
 	requested_info = json_string_value(name);
 	printf("Shader-Name: %s\n",requested_info);
-	
-	
-	// get input texture and save to disk
-	// Shader->renderpass->inputs
-	// id":46,
-	// "src":"\/media\/a\/79520a3d3a0f4d3caa440802ef4362e99d54e12b1392973e4ea321840970a88a.jpg
-
-	// iterating through arrays with jansson
-	json_t 		*renderpass, *inputs, *id;
+	json_t 		*renderpass, *inputs;
 	renderpass 	= json_object_get(Shader, "renderpass");
-	if(json_is_array(renderpass)){
-		printf("renderpass is an array\n");
-	}
 	for(size_t i = 0; i < json_array_size(renderpass); i++){
 		json_t *data = json_array_get(renderpass, i);
-		if(json_is_array(data)){
-			printf("data is an array\n");
-		}
+
 		inputs = json_object_get(data, "inputs");
 		if(json_is_array(inputs)){
-			printf("inputs is an array\n");
 			for(size_t j = 0; j < json_array_size(inputs); j++){
 				json_t *data 	= json_array_get(inputs	, j);
 				
-				id 		= json_object_get(data, "id");
-				// getting ID
-				if(json_is_integer(id))
-					printf("integer\n");
-				int number = json_integer_value(id);
-				printf("ID: %d\n",number);
+				// getting type
+				json_t *type;
+				type = json_object_get(data, "ctype");
 				
-				// getting partial URL
-				json_t *src;
-				src = json_object_get(data, "src");
-				requested_info  = json_string_value(src);
-// 				printf("src: %s\n",requested_info);
-				
-				// save image
-				char url[URL_SIZE];
-				snprintf(url, URL_SIZE, URL_ASSET, requested_info);
-// 				printf("%s\n",url);
-// 				fflush(stdout);
-				save_image(url);
+				// only texture support for now
+				requested_info  = json_string_value(type);
+				if (!strcmp("texture",requested_info)){
+					printf("type: %s\n",requested_info);
+					json_t *channel;
+					channel= json_object_get(data, "channel");
+					int chan = json_integer_value(channel);
+					(void) chan;
+					
+					json_t *src;
+					src = json_object_get(data, "src");
+					requested_info  = json_string_value(src);
+					char *str = strdup(requested_info);
+					char *token = strtok(str, "/");
+					char *last;
+					while (token != NULL){
+						last=token;
+						token = strtok(NULL, "/");
+					}
+
+					char url[URL_SIZE];
+					snprintf(url, URL_SIZE, URL_BASE"%s", requested_info);
+					save_image(url,last);
+				} else
+					printf("Not a supported type!\n");
+
 			}
 		}
 				
 
 	}
-	json_decref(root);
-	
-	// save shader json
-	FILE *fp;
-	char buffer[64];
-	snprintf(buffer, sizeof(buffer), "%s.json",argv[1]);
-	fp = fopen( buffer , "w" );
-	fputs(text, fp);
-	fclose(fp);
-	
-	// set file non executable, one probably won't need this
-	snprintf(buffer, sizeof(buffer), "chmod -x %s.json", argv[1]);
-	system(buffer);
-	
-	free(key);
 	free(text);
+	json_decref(root);
 	return EXIT_SUCCESS;
 	
 }
@@ -271,32 +272,78 @@ char *request(const char *url)
 	return NULL;
 }
 
-int save_image( char *url)
+int save_image( char *url, char *filename)
 {
-	CURL *image; 
-	image = curl_easy_init(); 
-	if( image ){ 
-		// Open file 
-		FILE *fp;
-		fp = fopen("tex.jpg", "wb");
-		if( fp == NULL )
-			printf("no image for you");
-		else
-			system("chmod -x tex.jpg");
-		CURLcode imgresult;
-		curl_easy_setopt(image, CURLOPT_URL, url);
-		curl_easy_setopt(image, CURLOPT_WRITEFUNCTION, NULL); 
-		curl_easy_setopt(image, CURLOPT_WRITEDATA, fp); 
-
-		// Grab image 
-		imgresult = curl_easy_perform(image); 
-		if( imgresult ){ 
-			printf("still no image for you"); 
-		}
-
-		curl_easy_cleanup(image); 
-		fclose(fp); 
+	// check if file exists:
+	if( access( filename, F_OK ) != -1 ) {
+		printf("exists, nothing to do!\n");
 		return 0;
+	} else {
+		printf("does not exist, trying to download...\n");
+		CURL *image; 
+		image = curl_easy_init();
+		
+		if( image ){ 
+			// Open file 
+			FILE *fp;
+			fp = fopen(filename, "wb");
+
+			// set file non executable, one probably won't need this
+			char buffer[128];
+			snprintf(buffer, sizeof(buffer), "chmod -x %s", filename);
+			system(buffer);
+
+			if( fp == NULL )
+				printf("no image for you");
+			
+			CURLcode imgresult;
+			curl_easy_setopt(image, CURLOPT_URL, url);
+			curl_easy_setopt(image, CURLOPT_WRITEFUNCTION, NULL); 
+			curl_easy_setopt(image, CURLOPT_WRITEDATA, fp); 
+			
+			// Grab image 
+			imgresult = curl_easy_perform(image); 
+			if( imgresult ){ 
+				printf("still no image for you"); 
+			}
+			
+			curl_easy_cleanup(image); 
+			fclose(fp); 
+			return 0;
+		}
+		
 	}
+
 	return 1; 
 }
+
+char * read_file(char *filename)
+{
+	long length 	= 0;
+	char *result 	= NULL;
+	FILE *file 	= fopen(filename, "r");
+	
+	if(file) {
+		int status = fseek(file, 0, SEEK_END);
+		if(status != 0) {
+			fclose(file);
+			return NULL;
+		}
+		length = ftell(file);
+		status = fseek(file, 0, SEEK_SET);
+		if(status != 0){
+			fclose(file);
+			return NULL;
+		}
+		result = malloc((length+1) * sizeof(char));
+		if(result) {
+			size_t actual_length = fread(result, sizeof(char), length , file);
+			result[actual_length++] = '\0';
+		} 
+		fclose(file);
+		return result;
+	}
+	fprintf(stderr,"Couldn't read %s\n", filename);
+	return NULL;
+}
+

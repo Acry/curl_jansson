@@ -7,11 +7,15 @@
 // Code does: load a texture needed by shader from shadertoy
 // see: https://www.shadertoy.com/api
 
-// example:  
-// ./4 Ms2SWW
+// example:
+// ./5 Ms2SWW
+
+// focus on type and existence
 
 /*
-Access the assets.
+Access the assets
+-----------------
+
 When you retrieve a shader you will see a key called "inputs",
 this can be a texture/video/keyboard/sound used by the shader.
 
@@ -19,13 +23,24 @@ The JSON returned when accessing a shader will look like this:
 [..]
 {"inputs":[{"id":17,"src":"/media/a/(hash.extension)","ctype":"texture","channel":0}
 [..] 
+[array] | {"object"}
+
+What kind of hash is it? It's not sha256sum!
+
+Don't understand the logic/purpose behind the ID also right now either;
+prob. DB connection in mindbut those should be auto.
 
 To access this specific asset you can just cut and paste this path
 https://www.shadertoy.com/media/a/(hash.extension)
+
 */
 
 #define CONFFILE	"api_key"
 #define BUFFER_SIZE  	(256 * 1024)  /* 256 KB */
+
+// concat base and api
+#define URL_BASE	"https://www.shadertoy.com"
+#define URL_API		""URL_BASE"/api/v1/shaders/%s?key=%s"
 
 #define URL_ASSET	"https://www.shadertoy.com%s"
 #define URL_FORMAT   	"https://www.shadertoy.com/api/v1/shaders/%s?key=%s"
@@ -63,8 +78,9 @@ int main(int argc, char *argv[])
 	
 	// set URL
 	char url[URL_SIZE];
-	snprintf(url, URL_SIZE, URL_FORMAT, argv[1], key);
-	
+// 	snprintf(url, URL_SIZE, URL_FORMAT, argv[1], key);
+	snprintf(url, URL_SIZE, URL_API, argv[1], key);
+// 	printf(""URL_API"\n", argv[1], key);
 	// get shader info in json format
 	char *text;
 	text = request(url);
@@ -95,27 +111,13 @@ int main(int argc, char *argv[])
 	
 	requested_info = json_string_value(name);
 	printf("Shader-Name: %s\n",requested_info);
-	
-	
-	// get input texture and save to disk
-	// Shader->renderpass->inputs
-	// id":46,
-	// "src":"\/media\/a\/79520a3d3a0f4d3caa440802ef4362e99d54e12b1392973e4ea321840970a88a.jpg
-
-	// iterating through arrays with jansson
 	json_t 		*renderpass, *inputs, *id;
 	renderpass 	= json_object_get(Shader, "renderpass");
-	if(json_is_array(renderpass)){
-		printf("renderpass is an array\n");
-	}
 	for(size_t i = 0; i < json_array_size(renderpass); i++){
 		json_t *data = json_array_get(renderpass, i);
-		if(json_is_array(data)){
-			printf("data is an array\n");
-		}
+
 		inputs = json_object_get(data, "inputs");
 		if(json_is_array(inputs)){
-			printf("inputs is an array\n");
 			for(size_t j = 0; j < json_array_size(inputs); j++){
 				json_t *data 	= json_array_get(inputs	, j);
 				
@@ -126,11 +128,46 @@ int main(int argc, char *argv[])
 				int number = json_integer_value(id);
 				printf("ID: %d\n",number);
 				
+				// getting type
+				json_t *type;
+				type = json_object_get(data, "ctype");
+				
+				// only texture support for now
+				requested_info  = json_string_value(type);
+				printf("type: %s\n",requested_info);
+				// "channel":0
+				json_t *channel;
+				channel= json_object_get(data, "channel");
+				int chan = json_integer_value(channel);
+				printf("channel: %d\n",chan);
+				// "sampler":{"filter":"mipmap","wrap":"repeat","vflip":"true","srgb":"false","internal":"byte"}
 				// getting partial URL
+				
 				json_t *src;
 				src = json_object_get(data, "src");
 				requested_info  = json_string_value(src);
-// 				printf("src: %s\n",requested_info);
+				printf("src: %s\n",requested_info);
+				char *str = strdup(requested_info);
+// 				printf("%s\n", requested_info);
+				char *token = strtok(str, "/");
+				char *last;
+				while (token != NULL){
+// 					printf("%s\n", token);
+					last=token;
+					token = strtok(NULL, "/");
+				}
+				
+// 				printf(str);
+				printf("Filename: %s\n", last);
+
+				// add filename and check if file is there
+				// if type is texture, check and set vars
+				// merge into shade it with drop events
+				// first text drop
+				// then file drop
+					// no sopport
+				// .ST.glsl ST.json
+				// then FFT
 				
 				// save image
 				char url[URL_SIZE];
@@ -279,10 +316,13 @@ int save_image( char *url)
 		// Open file 
 		FILE *fp;
 		fp = fopen("tex.jpg", "wb");
+		// set file non executable, one probably won't need this
+// 		char buffer[64];
+// 		snprintf(buffer, sizeof(buffer), "chmod -x %s.json", argv[1]);
+		system("chmod -x tex.jpg");
 		if( fp == NULL )
 			printf("no image for you");
-		else
-			system("chmod -x tex.jpg");
+
 		CURLcode imgresult;
 		curl_easy_setopt(image, CURLOPT_URL, url);
 		curl_easy_setopt(image, CURLOPT_WRITEFUNCTION, NULL); 
